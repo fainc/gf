@@ -440,3 +440,72 @@ func Test_Issue_4330_TypeMapping_Ineffective(t *testing.T) {
 		}
 	})
 }
+
+func Test_Gen_Pbentity_Sharding(t *testing.T) {
+	gtest.C(t, func(t *gtest.T) {
+		var (
+			err         error
+			db          = testDB
+			tableSingle = "single_table"
+			table1      = "users_0001"
+			table2      = "users_0002"
+			table3      = "orders_0001"
+			table4      = "orders_0002"
+			sqlFilePath = gtest.DataPath(`gendao`, `sharding`, `sharding.sql`)
+		)
+		dropTableWithDb(db, tableSingle)
+		dropTableWithDb(db, table1)
+		dropTableWithDb(db, table2)
+		dropTableWithDb(db, table3)
+		dropTableWithDb(db, table4)
+		t.AssertNil(execSqlFile(db, sqlFilePath))
+		defer dropTableWithDb(db, tableSingle)
+		defer dropTableWithDb(db, table1)
+		defer dropTableWithDb(db, table2)
+		defer dropTableWithDb(db, table3)
+		defer dropTableWithDb(db, table4)
+
+		var (
+			path = gfile.Temp(guid.S())
+			in   = genpbentity.CGenPbEntityInput{
+				Path:              path,
+				Package:           "unittest",
+				Link:              link,
+				Tables:            "",
+				RemovePrefix:      "",
+				RemoveFieldPrefix: "",
+				NameCase:          "",
+				JsonCase:          "",
+				Option:            "",
+				TypeMapping:       nil,
+				FieldMapping:      nil,
+				ShardingPattern: []string{
+					`users_?`,
+					`orders_?`,
+				},
+			}
+		)
+		err = gutil.FillStructWithDefault(&in)
+		t.AssertNil(err)
+
+		err = gfile.Mkdir(path)
+		t.AssertNil(err)
+		defer gfile.Remove(path)
+
+		_, err = genpbentity.CGenPbEntity{}.PbEntity(ctx, in)
+		t.AssertNil(err)
+
+		// files
+		t.AssertNil(err)
+		generatedFiles, err := gfile.ScanDir(path, "*.proto", true)
+		t.Assert(len(generatedFiles), 3)
+		var (
+			msgSingleTableContent = gfile.GetContents(gfile.Join(path, "single_table.proto"))
+			msgUsersContent       = gfile.GetContents(gfile.Join(path, "users.proto"))
+			msgOrdersContent      = gfile.GetContents(gfile.Join(path, "orders.proto"))
+		)
+		t.Assert(gstr.Contains(msgSingleTableContent, "message SingleTable {"), true)
+		t.Assert(gstr.Contains(msgUsersContent, "message Users {"), true)
+		t.Assert(gstr.Contains(msgOrdersContent, "message Orders {"), true)
+	})
+}

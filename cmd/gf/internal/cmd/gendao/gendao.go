@@ -219,12 +219,13 @@ func doGenDaoForArray(ctx context.Context, index int, in CGenDaoInput) {
 					tableNames[i] = ""
 					continue
 				}
-				shardingNewTableSet.Add(newTableName)
+				// Add prefix to sharding table name, if not, the isSharding check would not match.
+				shardingNewTableSet.Add(in.Prefix + newTableName)
 			}
 		}
 		newTableName = in.Prefix + newTableName
 		if tableNames[i] != "" {
-			// if shardingNewTableSet contains newTableName ( tableName is empty), it should not be added to tableNames,make it empty and filter later.
+			// If shardingNewTableSet contains newTableName (tableName is empty), it should not be added to tableNames, make it empty and filter later.
 			newTableNames[i] = newTableName
 		}
 	}
