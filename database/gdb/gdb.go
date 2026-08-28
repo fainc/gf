@@ -1131,6 +1131,12 @@ func (c *Core) getSqlDb(master bool, schema ...string) (sqlDb *sql.DB, err error
 		n := *c.db.GetConfig()
 		node = &n
 	}
+	if node.Link != "" {
+		node, err = parseConfigNodeLink(node)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if node.Charset == "" {
 		node.Charset = defaultCharset
 	}
